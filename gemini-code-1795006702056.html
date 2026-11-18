@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon Éditeur GrapesJS GitHub</title>
+  
+  <!-- GrapesJS CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/grapesjs/dist/css/grapes.min.css">
+  <!-- Plugin Custom Code CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/grapesjs-custom-code/dist/grapesjs-custom-code.min.css">
+  
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    /* Barre supérieure personnalisée pour le Gestionnaire de Pages */
+    .panel__pages {
+      height: 40px;
+      background: #2b2b2b;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 15px;
+      gap: 15px;
+      font-size: 14px;
+      border-bottom: 1px solid #444;
+    }
+    .panel__pages select, .panel__pages button {
+      background: #444;
+      color: white;
+      border: 1px solid #555;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .panel__pages button:hover {
+      background: #555;
+    }
+    #gjs {
+      height: calc(100vh - 40px);
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barre du Gestionnaire de Pages -->
+  <div class="panel__pages">
+    <strong>📄 Pages :</strong>
+    <select id="page-select"></select>
+    <button id="add-page">+ Ajouter une page</button>
+    <button id="delete-page">Supprimer la page active</button>
+  </div>
+
+  <!-- Conteneur principal de l'éditeur -->
+  <div id="gjs"></div>
+
+  <!-- Scripts GrapesJS et Plugins -->
+  <script src="https://unpkg.com/grapesjs"></script>
+  <script src="https://unpkg.com/grapesjs-preset-webpage"></script>
+  <script src="https://unpkg.com/grapesjs-custom-code"></script>
+
+  <script>
+    // Initialisation de GrapesJS
+    const editor = grapesjs.init({
+      container: '#gjs',
+      height: '100%',
+      fromElement: false,
+      storageManager: {
+        type: 'local', // Sauvegarde automatique dans le navigateur (LocalStorage)
+        autosave: true,
+        autoload: true,
+        stepsBeforeSave: 1,
+      },
+      // Configuration du module de Pages
+      pageManager: {
+        pages: [
+          {
+            id: 'accueil',
+            name: 'Accueil',
+            component: '<h1>Page d\'Accueil</h1><p>Glissez des blocs depuis le panneau de droite et déplacez-les librement.</p>',
+          },
+          {
+            id: 'a-propos',
+            name: 'À propos',
+            component: '<h1>À propos de nous</h1><p>Contenu de la seconde page...</p>',
+          }
+        ]
+      },
+      plugins: [
+        'gjs-preset-webpage',
+        'grapesjs-custom-code'
+      ],
+      pluginsOpts: {
+        'gjs-preset-webpage': {},
+        'grapesjs-custom-code': {}
+      }
+    });
+
+    // --- Logique du Gestionnaire de Pages UI ---
+    const pageSelect = document.getElementById('page-select');
+    const addPageBtn = document.getElementById('add-page');
+    const deletePageBtn = document.getElementById('delete-page');
+
+    function updatePageSelect() {
+      const pages = editor.Pages.getAll();
+      pageSelect.innerHTML = '';
+      pages.forEach(page => {
+        const opt = document.createElement('option');
+        opt.value = page.getId();
+        opt.innerHTML = page.getName() || page.getId();
+        if (page === editor.Pages.getSelected()) {
+          opt.selected = true;
+        }
+        pageSelect.appendChild(opt);
+      });
+    }
+
+    // Mettre à jour le sélecteur quand l'état des pages change
+    editor.on('page', () => {
+      updatePageSelect();
+    });
+
+    // Changer de page via le menu déroulant
+    pageSelect.addEventListener('change', (e) => {
+      editor.Pages.select(e.target.value);
+    });
+
+    // Ajouter une nouvelle page dynamiquement
+    addPageBtn.addEventListener('click', () => {
+      const count = editor.Pages.getAll().length + 1;
+      editor.Pages.add({
+        id: 'page-' + Date.now(),
+        name: 'Nouvelle Page ' + count,
+        component: `<h1>Page ${count}</h1><p>Commencez à éditer cette page ici.</p>`
+      });
+      updatePageSelect();
+    });
+
+    // Supprimer la page active
+    deletePageBtn.addEventListener('click', () => {
+      const selected = editor.Pages.getSelected();
+      if (editor.Pages.getAll().length > 1) {
+        if (confirm(`Voulez-vous vraiment supprimer la page "${selected.getName()}" ?`)) {
+          editor.Pages.remove(selected.getId());
+          updatePageSelect();
+        }
+      } else {
+        alert("Impossible de supprimer la dernière page restante !");
+      }
+    });
+
+    // Initialisation initiale de la liste au chargement
+    editor.on('load', () => {
+      updatePageSelect();
+    });
+  </script>
+</body>
+</html>
